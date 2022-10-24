@@ -1,12 +1,12 @@
 package interchaintxs
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	porttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
-	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
+	channeltypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
+	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 
 	"github.com/neutron-org/neutron/x/interchaintxs/keeper"
 )
@@ -16,6 +16,7 @@ var _ porttypes.IBCModule = IBCModule{}
 // IBCModule implements the ICS26 interface for interchain accounts controller chains
 type IBCModule struct {
 	keeper keeper.Keeper
+	app    porttypes.IBCModule
 }
 
 // NewIBCModule creates a new IBCModule given the keeper
@@ -28,15 +29,16 @@ func NewIBCModule(k keeper.Keeper) IBCModule {
 // OnChanOpenInit implements the IBCModule interface. We don't need to implement this handler.
 func (im IBCModule) OnChanOpenInit(
 	ctx sdk.Context,
-	_order channeltypes.Order,
-	_connectionHops []string,
+	order channeltypes.Order,
+	connectionHops []string,
 	portID string,
 	channelID string,
 	chanCap *capabilitytypes.Capability,
-	_counterparty channeltypes.Counterparty,
-	_version string,
-) error {
-	return im.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID))
+	counterparty channeltypes.Counterparty,
+	version string,
+) (string, error) {
+	return im.app.OnChanOpenInit(ctx, order, connectionHops, portID, channelID, chanCap, counterparty, version)
+	//return im.keeper.ClaimCapability(ctx, chanCap, host.ChannelCapabilityPath(portID, channelID))
 }
 
 // OnChanOpenTry implements the IBCModule interface. We don't need to implement this handler.
@@ -101,7 +103,7 @@ func (im IBCModule) OnRecvPacket(
 	_packet channeltypes.Packet,
 	_relayer sdk.AccAddress,
 ) ibcexported.Acknowledgement {
-	return channeltypes.NewErrorAcknowledgement("cannot receive packet via interchain accounts authentication module")
+	return channeltypes.NewErrorAcknowledgement(fmt.Errorf("cannot receive packet via interchain accounts authentication module"))
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface.
