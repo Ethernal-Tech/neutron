@@ -9,9 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	wasmapp "github.com/CosmWasm/wasmd/app"
 	"github.com/CosmWasm/wasmd/x/wasm"
-	wasmclient "github.com/CosmWasm/wasmd/x/wasm/client"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -46,7 +44,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	ccvdistrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	ccvdistrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
@@ -55,16 +52,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
-	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -72,7 +64,6 @@ import (
 	ccvstakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
@@ -87,7 +78,6 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
 	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client"
-	ibcclientclient "github.com/cosmos/ibc-go/v3/modules/core/02-client/client"
 	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 	ibcporttypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
@@ -97,7 +87,7 @@ import (
 	ibcconsumerkeeper "github.com/cosmos/interchain-security/x/ccv/consumer/keeper"
 	ibcconsumertypes "github.com/cosmos/interchain-security/x/ccv/consumer/types"
 	ccvdistr "github.com/cosmos/interchain-security/x/ccv/democracy/distribution"
-	ccvgov "github.com/cosmos/interchain-security/x/ccv/democracy/governance"
+
 	ccvstaking "github.com/cosmos/interchain-security/x/ccv/democracy/staking"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -125,6 +115,16 @@ import (
 	ccvmint "github.com/cosmos/cosmos-sdk/x/mint"
 	ccvmintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	ccvminttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+
+	adminmodulemodule "github.com/cosmos/admin-module/x/adminmodule"
+	adminmodulecli "github.com/cosmos/admin-module/x/adminmodule/client/cli"
+	adminmodulemodulekeeper "github.com/cosmos/admin-module/x/adminmodule/keeper"
+	adminmodulemoduletypes "github.com/cosmos/admin-module/x/adminmodule/types"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	paramsrest "github.com/cosmos/cosmos-sdk/x/params/client/rest"
+	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+	upgraderest "github.com/cosmos/cosmos-sdk/x/upgrade/client/rest"
 )
 
 const (
@@ -158,21 +158,6 @@ func GetEnabledProposals() []wasm.ProposalType {
 	return proposals
 }
 
-func getGovProposalHandlers() []govclient.ProposalHandler {
-	var govProposalHandlers []govclient.ProposalHandler
-
-	govProposalHandlers = append(govProposalHandlers,
-		paramsclient.ProposalHandler,
-		ccvdistrclient.ProposalHandler,
-		upgradeclient.ProposalHandler,
-		upgradeclient.CancelProposalHandler,
-		ibcclientclient.UpdateClientProposalHandler,
-		ibcclientclient.UpgradeProposalHandler,
-	)
-
-	return append(wasmclient.ProposalHandlers, govProposalHandlers...)
-}
-
 var (
 	// DefaultNodeHome default home directories for the application daemon
 	DefaultNodeHome string
@@ -199,10 +184,23 @@ var (
 		transfer.AppModuleBasic{},
 		vesting.AppModuleBasic{},
 		wasm.AppModuleBasic{},
-		gov.NewAppModuleBasic(getGovProposalHandlers()...),
 		interchainqueries.AppModuleBasic{},
 		interchaintxs.AppModuleBasic{},
 		ibcconsumer.AppModuleBasic{},
+		adminmodulemodule.NewAppModuleBasic(
+			govclient.NewProposalHandler(
+				adminmodulecli.NewSubmitParamChangeProposalTxCmd,
+				paramsrest.ProposalRESTHandler,
+			),
+			govclient.NewProposalHandler(
+				adminmodulecli.NewCmdSubmitUpgradeProposal,
+				upgraderest.ProposalRESTHandler,
+			),
+			govclient.NewProposalHandler(
+				adminmodulecli.NewCmdSubmitCancelUpgradeProposal,
+				upgraderest.ProposalCancelRESTHandler,
+			),
+		),
 	)
 
 	// module account permissions
@@ -212,7 +210,6 @@ var (
 		ccvstakingtypes.NotBondedPoolName:             {authtypes.Burner, authtypes.Staking},
 		ccvminttypes.ModuleName:                       {authtypes.Minter},
 		ccvdistrtypes.ModuleName:                      nil,
-		govtypes.ModuleName:                           {authtypes.Burner},
 		ibctransfertypes.ModuleName:                   {authtypes.Minter, authtypes.Burner},
 		icatypes.ModuleName:                           nil,
 		wasm.ModuleName:                               {authtypes.Burner},
@@ -265,7 +262,6 @@ type App struct {
 	BankKeeper          bankkeeper.Keeper
 	CapabilityKeeper    *capabilitykeeper.Keeper
 	SlashingKeeper      slashingkeeper.Keeper
-	GovKeeper           govkeeper.Keeper
 	CrisisKeeper        crisiskeeper.Keeper
 	UpgradeKeeper       upgradekeeper.Keeper
 	ParamsKeeper        paramskeeper.Keeper
@@ -286,7 +282,8 @@ type App struct {
 	InterchainQueriesKeeper interchainqueriesmodulekeeper.Keeper
 	InterchainTxsKeeper     interchaintxskeeper.Keeper
 
-	ConsumerKeeper ibcconsumerkeeper.Keeper
+	ConsumerKeeper    ibcconsumerkeeper.Keeper
+	AdminmoduleKeeper adminmodulemodulekeeper.Keeper
 
 	WasmKeeper wasm.Keeper
 
@@ -340,11 +337,11 @@ func New(
 	keys := sdk.NewKVStoreKeys(
 		authtypes.StoreKey, banktypes.StoreKey, ccvstakingtypes.StoreKey, ccvdistrtypes.StoreKey,
 		slashingtypes.StoreKey, ccvminttypes.StoreKey,
-		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey,
+		paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey, icacontrollertypes.StoreKey,
 		icahosttypes.StoreKey, capabilitytypes.StoreKey,
 		interchainqueriesmoduletypes.StoreKey, interchaintxstypes.StoreKey, wasm.StoreKey,
-		ibcconsumertypes.StoreKey,
+		ibcconsumertypes.StoreKey, adminmodulemoduletypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -467,13 +464,23 @@ func New(
 		app.AccountKeeper, scopedICAHostKeeper, app.MsgServiceRouter(),
 	)
 
-	// register the proposal types
-	govRouter := govtypes.NewRouter()
-	govRouter.
-		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+	adminRouter := govtypes.NewRouter()
+	adminRouter.AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
 		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper)).
 		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper))
+	if len(enabledProposals) != 0 {
+		adminRouter.AddRoute(wasm.RouterKey, wasm.NewWasmProposalHandler(app.WasmKeeper, enabledProposals))
+	}
+
+	app.AdminmoduleKeeper = *adminmodulemodulekeeper.NewKeeper(
+		appCodec,
+		keys[adminmodulemoduletypes.StoreKey],
+		keys[adminmodulemoduletypes.MemStoreKey],
+		adminRouter,
+		IsConsumerProposalWhitelisted,
+	)
+	adminModule := adminmodulemodule.NewAppModule(appCodec, app.AdminmoduleKeeper)
 
 	// Create Transfer Keepers
 	app.TransferKeeper = wrapkeeper.NewKeeper(
@@ -528,6 +535,8 @@ func New(
 		app.GetSubspace(wasm.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
+		app.StakingKeeper,
+		app.DistrKeeper,
 		app.IBCKeeper.ChannelKeeper,
 		&app.IBCKeeper.PortKeeper,
 		scopedWasmKeeper,
@@ -542,26 +551,6 @@ func New(
 
 	transferIBCModule := transferSudo.NewIBCModule(app.TransferKeeper, &app.WasmKeeper)
 
-	// Create static IBC router, add transfer route, then set and seal it
-	ibcRouter := ibcporttypes.NewRouter()
-	if len(enabledProposals) != 0 {
-		govRouter.AddRoute(wasm.RouterKey, wasm.NewWasmProposalHandler(app.WasmKeeper, enabledProposals))
-	}
-
-	// TODO(pr0n00gler): check whether we can safely omit this (copied from consumer-democracy/app.go).
-	// // register the proposal types
-	//	ccvgovRouter := ccvgovtypes.NewRouter()
-	//	ccvgovRouter.AddRoute(ccvgovtypes.RouterKey, ccvgovtypes.ProposalHandler).
-	//		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
-	//		AddRoute(ccvdistrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.DistrKeeper)).
-	//		// TODO: remove upgrade handler from gov once admin module or decision for only signaling proposal is made.
-	//		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper))
-	app.GovKeeper = govkeeper.NewKeeper(
-		appCodec, keys[govtypes.StoreKey], app.GetSubspace(govtypes.ModuleName), app.AccountKeeper, app.BankKeeper,
-		&ccvstakingKeeper,
-		govRouter,
-	)
-
 	icaModule := ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper)
 	icaControllerIBCModule := icacontroller.NewIBCModule(app.ICAControllerKeeper, interchaintxs.NewIBCModule(app.InterchainTxsKeeper))
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
@@ -569,6 +558,8 @@ func New(
 	interchainQueriesModule := interchainqueries.NewAppModule(appCodec, app.InterchainQueriesKeeper, app.AccountKeeper, app.BankKeeper)
 	interchainTxsModule := interchaintxs.NewAppModule(appCodec, app.InterchainTxsKeeper, app.AccountKeeper, app.BankKeeper)
 
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := ibcporttypes.NewRouter()
 	ibcRouter.AddRoute(icacontrollertypes.SubModuleName, icaControllerIBCModule).
 		AddRoute(icahosttypes.SubModuleName, icaHostIBCModule).
 		AddRoute(ibctransfertypes.ModuleName, transferIBCModule).
@@ -599,7 +590,6 @@ func New(
 		capability.NewAppModule(appCodec, *app.CapabilityKeeper),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants),
-		ccvgov.NewAppModule(appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper, IsProposalWhitelisted),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.ConsumerKeeper),
 		ccvdistr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, authtypes.FeeCollectorName),
 		ccvstaking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
@@ -613,6 +603,7 @@ func New(
 		interchainQueriesModule,
 		interchainTxsModule,
 		consumerModule,
+		adminModule,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -633,7 +624,6 @@ func New(
 		authtypes.ModuleName,
 		authz.ModuleName,
 		banktypes.ModuleName,
-		govtypes.ModuleName,
 		crisistypes.ModuleName,
 		feegrant.ModuleName,
 		paramstypes.ModuleName,
@@ -642,12 +632,12 @@ func New(
 		interchainqueriesmoduletypes.ModuleName,
 		interchaintxstypes.ModuleName,
 		ibcconsumertypes.ModuleName,
+		adminmodulemoduletypes.ModuleName,
 		wasm.ModuleName,
 	)
 
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
-		govtypes.ModuleName,
 		ccvstakingtypes.ModuleName,
 		ccvminttypes.ModuleName,
 		capabilitytypes.ModuleName,
@@ -668,6 +658,7 @@ func New(
 		interchainqueriesmoduletypes.ModuleName,
 		interchaintxstypes.ModuleName,
 		ibcconsumertypes.ModuleName,
+		adminmodulemoduletypes.ModuleName,
 		wasm.ModuleName,
 	)
 
@@ -680,13 +671,12 @@ func New(
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		authz.ModuleName,
+		banktypes.ModuleName,
 		ccvminttypes.ModuleName,
 		ccvdistrtypes.ModuleName,
 		ccvstakingtypes.ModuleName,
-		banktypes.ModuleName,
 		vestingtypes.ModuleName,
 		slashingtypes.ModuleName,
-		govtypes.ModuleName,
 		crisistypes.ModuleName,
 		ibchost.ModuleName,
 		evidencetypes.ModuleName,
@@ -698,6 +688,7 @@ func New(
 		interchainqueriesmoduletypes.ModuleName,
 		interchaintxstypes.ModuleName,
 		ibcconsumertypes.ModuleName,
+		adminmodulemoduletypes.ModuleName,
 		wasm.ModuleName,
 	)
 
@@ -713,7 +704,6 @@ func New(
 		capability.NewAppModule(appCodec, *app.CapabilityKeeper),
 		ccvmint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
-		gov.NewAppModule(appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper),
 		ccvstaking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
 		ccvdistr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, authtypes.FeeCollectorName),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.ConsumerKeeper),
@@ -736,8 +726,8 @@ func New(
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 
-	anteHandler, err := wasmapp.NewAnteHandler(
-		wasmapp.HandlerOptions{
+	anteHandler, err := NewAnteHandler(
+		HandlerOptions{
 			HandlerOptions: ante.HandlerOptions{
 				AccountKeeper:   app.AccountKeeper,
 				BankKeeper:      app.BankKeeper,
@@ -934,13 +924,11 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
-
 	paramsKeeper.Subspace(interchainqueriesmoduletypes.ModuleName)
 	paramsKeeper.Subspace(interchaintxstypes.ModuleName)
 	paramsKeeper.Subspace(wasm.ModuleName)

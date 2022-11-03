@@ -6,9 +6,10 @@ require (
 	github.com/CosmWasm/wasmd v0.28.0
 	github.com/CosmWasm/wasmvm v1.0.0
 	github.com/confio/ics23/go v0.7.0
+	github.com/cosmos/admin-module v0.0.0
 	github.com/cosmos/cosmos-sdk v0.45.2-0.20220901181011-06d4a64bf808
-	github.com/cosmos/ibc-go/v3 v3.0.1
-	github.com/cosmos/interchain-security v0.0.0-20221020174727-3f9100acd62a
+	github.com/cosmos/ibc-go/v3 v3.0.0
+	github.com/cosmos/interchain-security v0.0.0-20221102103028-d7f8d448be65
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/mux v1.8.0
@@ -44,7 +45,6 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
 	github.com/cosmos/iavl v0.17.3 // indirect
-	github.com/cosmos/interchain-accounts v0.1.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.11.1 // indirect
 	github.com/cosmos/ledger-go v0.9.2 // indirect
 	github.com/danieljoos/wincred v1.0.2 // indirect
@@ -68,7 +68,9 @@ require (
 	github.com/google/orderedcode v0.0.1 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/gravity-devs/liquidity v1.4.5 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.2 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/gtank/merlin v0.1.1 // indirect
 	github.com/gtank/ristretto255 v0.1.2 // indirect
@@ -129,7 +131,8 @@ require (
 )
 
 replace (
-	github.com/CosmWasm/wasmd v0.28.0 => github.com/informalsystems/wasmd v0.27.0-junity.0.0.20220907182343-62a89ea77927
+	github.com/CosmWasm/wasmd v0.28.0 => github.com/informalsystems/wasmd v0.27.0-junity.0.0.20221028072954-88012a1ec3d7
+	github.com/cosmos/admin-module => github.com/Ethernal-Tech/admin-module v0.0.0-20221102105340-e693f4d379c3
 	github.com/cosmos/ibc-go/v3 => github.com/informalsystems/ibc-go/v3 v3.0.0-beta1.0.20220816140824-aba9c2f2b943
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4

@@ -7,14 +7,23 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 )
 
-func IsProposalWhitelisted(content govtypes.Content) bool {
+func IsConsumerProposalWhitelisted(content govtypes.Content) bool {
 
 	switch c := content.(type) {
 	case *proposal.ParameterChangeProposal:
-		return isParamChangeWhitelisted(c.Changes)
+		return isConsumerParamChangeWhitelisted(c.Changes)
+	case *govtypes.TextProposal,
+		*upgradetypes.SoftwareUpgradeProposal,
+		*upgradetypes.CancelSoftwareUpgradeProposal,
+		*ibcclienttypes.ClientUpdateProposal,
+		*ibcclienttypes.UpgradeProposal:
+		return true
 
 	default:
 		return false
@@ -22,7 +31,7 @@ func IsProposalWhitelisted(content govtypes.Content) bool {
 
 }
 
-func isParamChangeWhitelisted(paramChanges []proposal.ParamChange) bool {
+func isConsumerParamChangeWhitelisted(paramChanges []proposal.ParamChange) bool {
 	for _, paramChange := range paramChanges {
 		_, found := WhitelistedParams[paramChangeKey{Subspace: paramChange.Subspace, Key: paramChange.Key}]
 		if !found {
@@ -39,10 +48,6 @@ type paramChangeKey struct {
 var WhitelistedParams = map[paramChangeKey]struct{}{
 	//bank
 	{Subspace: banktypes.ModuleName, Key: "SendEnabled"}: {},
-	//governance
-	{Subspace: govtypes.ModuleName, Key: "depositparams"}: {}, //min_deposit, max_deposit_period
-	{Subspace: govtypes.ModuleName, Key: "votingparams"}:  {}, //voting_period
-	{Subspace: govtypes.ModuleName, Key: "tallyparams"}:   {}, //quorum,threshold,veto_threshold
 	//staking
 	{Subspace: stakingtypes.ModuleName, Key: "UnbondingTime"}:     {},
 	{Subspace: stakingtypes.ModuleName, Key: "MaxValidators"}:     {},
@@ -64,5 +69,7 @@ var WhitelistedParams = map[paramChangeKey]struct{}{
 	//ibc transfer
 	{Subspace: ibctransfertypes.ModuleName, Key: "SendEnabled"}:    {},
 	{Subspace: ibctransfertypes.ModuleName, Key: "ReceiveEnabled"}: {},
-	//add interchain account params(HostEnabled, AllowedMessages) once the module is added to the consumer app
+	//ica
+	{Subspace: icahosttypes.SubModuleName, Key: "HostEnabled"}:   {},
+	{Subspace: icahosttypes.SubModuleName, Key: "AllowMessages"}: {},
 }
